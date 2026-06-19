@@ -6,6 +6,7 @@ import connectDB from "./db/db.js";
 import { matchRouter } from "./routes/matches.js";
 import { attachWebSocketServer } from "./ws/server.js";
 import {commentaryRouter} from "./routes/commentary.js";
+import { startLiveMatchSimulator } from "./simulator/live-match-simulator.js";
 import cors from "cors";
 
 dotenv.config();
@@ -57,6 +58,8 @@ app.locals.broadcastMatchCreated = broadcastMatchCreated;
 app.locals.broadcastCommentary = broadcastCommentary;
 app.locals.broadcastScoreUpdate = broadcastScoreUpdate;
 
+let stopLiveMatchSimulator = null;
+
 //   Start Server (DB FIRST)
 async function startServer() {
   try {
@@ -65,6 +68,14 @@ async function startServer() {
     await connectDB();
 
     console.log("🟢 MongoDB Connected");
+
+    if (process.env.LIVE_SIMULATOR_ENABLED !== "false") {
+      stopLiveMatchSimulator = await startLiveMatchSimulator({
+        broadcastMatchCreated,
+        broadcastCommentary,
+        broadcastScoreUpdate,
+      });
+    }
 
     server.listen(PORT, () => {
       console.log(`Server running on http://localhost:${PORT}`);
@@ -77,3 +88,13 @@ async function startServer() {
 }
 
 startServer();
+
+function shutdown() {
+  stopLiveMatchSimulator?.();
+  server.close(() => {
+    process.exit(0);
+  });
+}
+
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);
