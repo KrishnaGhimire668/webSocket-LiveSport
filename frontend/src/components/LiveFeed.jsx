@@ -1,10 +1,8 @@
-import React from "react";
-
 export const LiveFeed = ({ messages, isActive, isLoading }) => {
   if (!isActive) {
     return (
-      <div className="h-full flex flex-col items-center justify-center text-center p-6 bg-gray-50 border-2 border-black rounded-2xl">
-        <div className="w-14 h-14 bg-yellow-400 border-2 border-black rounded-full flex items-center justify-center mb-4">
+      <div className="flex h-full flex-col items-center justify-center rounded-lg border-2 border-black bg-gray-50 p-6 text-center">
+        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full border-2 border-black bg-yellow-400">
           <span className="text-xl">📡</span>
         </div>
 
@@ -17,10 +15,10 @@ export const LiveFeed = ({ messages, isActive, isLoading }) => {
   }
 
   return (
-    <div className="flex flex-col h-full bg-white border-2 border-black rounded-2xl overflow-hidden">
+    <div className="flex h-full flex-col overflow-hidden rounded-lg border-2 border-black bg-white">
       
       {/* HEADER */}
-      <div className="p-3 bg-blue-500 text-white border-b-2 border-black flex justify-between items-center">
+      <div className="flex items-center justify-between gap-3 border-b-2 border-black bg-blue-500 p-3 text-white">
         <h3 className="font-bold">Live Commentary</h3>
         <span className="text-xs bg-white text-black px-2 py-1 rounded border border-black">
           LIVE
@@ -39,8 +37,11 @@ export const LiveFeed = ({ messages, isActive, isLoading }) => {
             Waiting for live updates...
           </div>
         ) : (
-          messages.map((msg) => (
-            <div key={msg.id} className="flex gap-3">
+          messages.map((msg) => {
+            const messageId = msg.id ?? msg._id ?? `${msg.matchId}-${msg.sequence ?? msg.createdAt}`;
+
+            return (
+            <div key={messageId} className="flex gap-3">
               
               {/* DOT */}
               <div className="flex flex-col items-center">
@@ -49,7 +50,7 @@ export const LiveFeed = ({ messages, isActive, isLoading }) => {
               </div>
 
               {/* CONTENT */}
-              <div className="pb-4">
+              <div className="min-w-0 pb-4">
                 
                 {/* META */}
                 <div className="flex flex-wrap gap-2 text-xs text-gray-500 mb-1">
@@ -72,13 +73,13 @@ export const LiveFeed = ({ messages, isActive, isLoading }) => {
 
                 {/* ACTOR */}
                 {(msg.actor || msg.team) && (
-                  <div className="text-xs font-semibold text-gray-700 mb-1">
+                  <div className="mb-1 text-xs font-semibold text-gray-700">
                     {msg.actor} {msg.team ? `• ${msg.team}` : ""}
                   </div>
                 )}
 
                 {/* MESSAGE */}
-                <div className="text-sm bg-gray-50 border border-gray-200 p-3 rounded-xl">
+                <div className="break-words rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm">
                   {msg.message}
                 </div>
 
@@ -97,7 +98,8 @@ export const LiveFeed = ({ messages, isActive, isLoading }) => {
                 )}
               </div>
             </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>

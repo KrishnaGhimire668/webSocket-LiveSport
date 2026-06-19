@@ -11,13 +11,22 @@ export const useWebSocket = (onMessage) => {
   const ws = useRef(null);
   const reconnectAttempts = useRef(0);
   const reconnectTimeout = useRef(null);
+  const connectTimeout = useRef(null);
   const isManualClose = useRef(false);
+  const connectRef = useRef(null);
 
   const subscribed = useRef(new Set());
 
+  const sendJson = useCallback((payload) => {
+    if (ws.current?.readyState !== WebSocket.OPEN) return false;
+
+    ws.current.send(JSON.stringify(payload));
+    return true;
+  }, []);
+
   const connect = useCallback(() => {
     if (ws.current) {
-      isManualClose.current = true;
+      ws.current.onclose = null;
       ws.current.close();
     }
 
@@ -29,21 +38,23 @@ export const useWebSocket = (onMessage) => {
     ws.current = socket;
 
     socket.onopen = () => {
+      if (ws.current !== socket) return;
+
       setStatus("connected");
       reconnectAttempts.current = 0;
 
       // restore subscriptions
       if (subscribed.current.size > 0) {
-        socket.send(
-          JSON.stringify({
-            type: "setSubscriptions",
-            matchIds: Array.from(subscribed.current),
-          })
-        );
+        sendJson({
+          type: "setSubscriptions",
+          matchIds: Array.from(subscribed.current),
+        });
       }
     };
 
     socket.onmessage = (event) => {
+      if (ws.current !== socket) return;
+
       try {
         const data = JSON.parse(event.data);
         onMessage(data);
@@ -53,10 +64,16 @@ export const useWebSocket = (onMessage) => {
     };
 
     socket.onerror = () => {
+      if (ws.current !== socket) return;
+
       setStatus("error");
     };
 
     socket.onclose = () => {
+      if (ws.current !== socket) return;
+
+      ws.current = null;
+
       if (isManualClose.current) {
         setStatus("disconnected");
         return;
@@ -72,12 +89,18 @@ export const useWebSocket = (onMessage) => {
 
       reconnectTimeout.current = setTimeout(() => {
         reconnectAttempts.current += 1;
-        connect();
+        connectRef.current?.();
       }, delay);
     };
-  }, [onMessage]);
+  }, [onMessage, sendJson]);
+
+  useEffect(() => {
+    connectRef.current = connect;
+  }, [connect]);
 
   const connectGlobal = useCallback(() => {
+    if (connectTimeout.current) return;
+
     if (
       ws.current &&
       (ws.current.readyState === 0 ||
@@ -86,36 +109,43 @@ export const useWebSocket = (onMessage) => {
       return;
     }
 
-    connect();
+    connectTimeout.current = setTimeout(() => {
+      connectTimeout.current = null;
+      connect();
+    }, 0);
   }, [connect]);
 
   const subscribeMatch = useCallback((matchId) => {
-    subscribed.current.add(String(matchId));
+    const subscriptionId = String(matchId);
+    subscribed.current.add(subscriptionId);
 
-    ws.current?.send(
-      JSON.stringify({
-        type: "subscribe",
-        matchId,
-      })
-    );
-  }, []);
+    sendJson({
+      type: "subscribe",
+      matchId: subscriptionId,
+    });
+  }, [sendJson]);
 
   const unsubscribeMatch = useCallback((matchId) => {
-    subscribed.current.delete(String(matchId));
+    const subscriptionId = String(matchId);
+    subscribed.current.delete(subscriptionId);
 
-    ws.current?.send(
-      JSON.stringify({
-        type: "unsubscribe",
-        matchId,
-      })
-    );
-  }, []);
+    sendJson({
+      type: "unsubscribe",
+      matchId: subscriptionId,
+    });
+  }, [sendJson]);
 
   const disconnect = useCallback(() => {
     isManualClose.current = true;
 
     if (reconnectTimeout.current) {
       clearTimeout(reconnectTimeout.current);
+      reconnectTimeout.current = null;
+    }
+
+    if (connectTimeout.current) {
+      clearTimeout(connectTimeout.current);
+      connectTimeout.current = null;
     }
 
     ws.current?.close();
@@ -127,6 +157,9 @@ export const useWebSocket = (onMessage) => {
   useEffect(() => {
     return () => {
       isManualClose.current = true;
+      if (connectTimeout.current) {
+        clearTimeout(connectTimeout.current);
+      }
       ws.current?.close();
       if (reconnectTimeout.current) {
         clearTimeout(reconnectTimeout.current);

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export const MatchCard = ({
   match,
@@ -6,6 +6,7 @@ export const MatchCard = ({
   onWatch,
   onUnwatch,
 }) => {
+  const matchId = match.id ?? match._id;
   const isLive = match.status?.toLowerCase() === "live";
 
   const [homePulse, setHomePulse] = useState(false);
@@ -50,13 +51,13 @@ export const MatchCard = ({
   return (
     <div
       className={`
-        p-5 border-2 border-black rounded-2xl bg-white
+        p-4 sm:p-5 border-2 border-black rounded-lg bg-white
         transition-all duration-200
         ${isActive ? "shadow-lg ring-2 ring-yellow-400" : ""}
       `}
     >
       {/* HEADER */}
-      <div className="flex justify-between items-center mb-4">
+      <div className="mb-4 flex items-center justify-between gap-3">
         <span className="text-xs font-bold uppercase">
           {match.sport}
         </span>
@@ -71,10 +72,10 @@ export const MatchCard = ({
       </div>
 
       {/* TEAMS */}
-      <div className="space-y-3 mb-5">
+      <div className="mb-5 space-y-3">
         {/* HOME */}
-        <div className="flex justify-between items-center">
-          <span className="font-bold">{match.homeTeam}</span>
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+          <span className="truncate font-bold">{match.homeTeam}</span>
           <span
             className={`px-3 py-1 border-2 border-black rounded-lg min-w-[50px] text-center ${
               homePulse ? "bg-yellow-300" : "bg-gray-100"
@@ -85,8 +86,8 @@ export const MatchCard = ({
         </div>
 
         {/* AWAY */}
-        <div className="flex justify-between items-center">
-          <span className="font-bold">{match.awayTeam}</span>
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+          <span className="truncate font-bold">{match.awayTeam}</span>
           <span
             className={`px-3 py-1 border-2 border-black rounded-lg min-w-[50px] text-center ${
               awayPulse ? "bg-yellow-300" : "bg-gray-100"
@@ -98,7 +99,7 @@ export const MatchCard = ({
       </div>
 
       {/* FOOTER */}
-      <div className="flex justify-between items-center border-t pt-4">
+      <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
         <span className="text-xs text-gray-500">
           {new Date(match.startTime).toLocaleTimeString([], {
             hour: "2-digit",
@@ -106,9 +107,9 @@ export const MatchCard = ({
           })}
         </span>
 
-        <div className="flex gap-2">
+        <div className="grid grid-cols-1 gap-2 sm:flex">
           <button
-            onClick={() => onWatch(match.id)}
+            onClick={() => onWatch(matchId)}
             disabled={isActive}
             className={`
               px-4 py-2 text-sm font-bold border-2 border-black rounded-full
@@ -125,7 +126,7 @@ export const MatchCard = ({
 
           {isActive && (
             <button
-              onClick={() => onUnwatch(match.id)}
+              onClick={() => onUnwatch(matchId)}
               className="px-3 py-2 text-xs font-bold border-2 border-black rounded-full bg-white hover:bg-gray-100"
             >
               Close

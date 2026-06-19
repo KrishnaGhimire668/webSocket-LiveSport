@@ -90,27 +90,47 @@ function handleMessage(socket, data) {
 
   const { type, matchId } = message;
 
-  if (type === "subscribe" && matchId) {
-    subscribe(matchId, socket);
-
-    socket.subscriptions.add(matchId);
+  if (type === "setSubscriptions" && Array.isArray(message.matchIds)) {
+    for (const id of message.matchIds) {
+      const subscriptionId = String(id);
+      subscribe(subscriptionId, socket);
+      socket.subscriptions.add(subscriptionId);
+    }
 
     return send(socket, {
       type: "subscribed",
-      matchId,
+      matchIds: Array.from(socket.subscriptions),
+    });
+  }
+
+  if (type === "subscribe" && matchId) {
+    const subscriptionId = String(matchId);
+    subscribe(subscriptionId, socket);
+
+    socket.subscriptions.add(subscriptionId);
+
+    return send(socket, {
+      type: "subscribed",
+      matchId: subscriptionId,
     });
   }
 
   if (type === "unsubscribe" && matchId) {
-    unsubscribe(matchId, socket);
+    const subscriptionId = String(matchId);
+    unsubscribe(subscriptionId, socket);
 
-    socket.subscriptions.delete(matchId);
+    socket.subscriptions.delete(subscriptionId);
 
     return send(socket, {
       type: "unsubscribed",
-      matchId,
+      matchId: subscriptionId,
     });
   }
+
+  return send(socket, {
+    type: "error",
+    message: `Unknown WebSocket message type: ${type || "missing"}`,
+  });
 }
 
 /*
@@ -119,7 +139,9 @@ function handleMessage(socket, data) {
 |--------------------------------------------------------------------------
 */
 
-export function attachWebSocketServer(server) {
+export function attachWebSocketServer(server, options = {}) {
+  const allowedOrigins = options.allowedOrigins || [];
+
   const wss = new WebSocketServer({
     noServer: true,
     path: "/ws",
@@ -130,7 +152,18 @@ export function attachWebSocketServer(server) {
   server.on("upgrade", async (req, socket, head) => {
     const { pathname } = new URL(req.url, `http://${req.headers.host}`);
 
-    if (pathname !== "/ws") return;
+    if (pathname !== "/ws") {
+      socket.write("HTTP/1.1 404 Not Found\r\n\r\n");
+      socket.destroy();
+      return;
+    }
+
+    const origin = req.headers.origin;
+    if (origin && allowedOrigins.length > 0 && !allowedOrigins.includes(origin)) {
+      socket.write("HTTP/1.1 403 Forbidden\r\n\r\n");
+      socket.destroy();
+      return;
+    }
 
     // Arcjet protection (optional)
     if (wsArcjet) {
@@ -214,14 +247,23 @@ export function attachWebSocketServer(server) {
   }
 
   function broadcastCommentary(matchId, comment) {
-    broadcastToMatch(matchId, {
+    broadcastToMatch(String(matchId), {
       type: "commentary",
       data: comment,
+    });
+  }
+
+  function broadcastScoreUpdate(matchId, score) {
+    broadcastToMatch(String(matchId), {
+      type: "score_update",
+      matchId: String(matchId),
+      data: score,
     });
   }
 
   return {
     broadcastMatchCreated,
     broadcastCommentary,
+    broadcastScoreUpdate,
   };
 }

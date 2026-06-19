@@ -12,16 +12,26 @@ export const useMatchData = () => {
 
   const [activeMatchId, setActiveMatchId] = useState(null);
   const [wsError, setWsError] = useState(null);
+  const [newMatchesCount, setNewMatchesCount] = useState(0);
 
   const latestMatchIdRef = useRef(null);
-  const subscribedRef = useRef(new Set());
-
   const handleWSMessage = useCallback((msg) => {
     switch (msg.type) {
+      case "welcome":
+      case "subscribed":
+      case "unsubscribed":
+        setWsError(null);
+        break;
+
+      case "match_created":
+        setMatches((prev) => [msg.data, ...prev]);
+        setNewMatchesCount((count) => count + 1);
+        break;
+
       case "score_update":
         setMatches((prev) =>
           prev.map((m) => {
-            if (String(m.id) === String(msg.matchId)) {
+            if (String(m.id ?? m._id) === String(msg.matchId)) {
               return {
                 ...m,
                 homeScore: msg.data.homeScore,
@@ -34,7 +44,7 @@ export const useMatchData = () => {
         break;
 
       case "commentary":
-        if (latestMatchIdRef.current !== msg.data.matchId) return;
+        if (String(latestMatchIdRef.current) !== String(msg.data.matchId)) return;
 
         setCommentary((prev) => [msg.data, ...prev]);
         break;
@@ -72,6 +82,7 @@ export const useMatchData = () => {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadMatches();
   }, [loadMatches]);
 
@@ -82,16 +93,18 @@ export const useMatchData = () => {
   // Watch match (IMPORTANT)
   const watchMatch = useCallback(
     async (id) => {
-      setActiveMatchId(id);
-      latestMatchIdRef.current = id;
+      const matchId = String(id);
+
+      setActiveMatchId(matchId);
+      latestMatchIdRef.current = matchId;
 
       setCommentary([]);
       setIsCommentaryLoading(true);
 
-      subscribeMatch(id);
+      subscribeMatch(matchId);
 
       try {
-        const res = await fetchMatchCommentary(id);
+        const res = await fetchMatchCommentary(matchId);
         setCommentary(res.data || []);
       } catch {
         setCommentary([]);
@@ -105,9 +118,11 @@ export const useMatchData = () => {
   // Unwatch match
   const unwatchMatch = useCallback(
     (id) => {
-      unsubscribeMatch(id);
+      const matchId = String(id);
 
-      if (activeMatchId === id) {
+      unsubscribeMatch(matchId);
+
+      if (String(activeMatchId) === matchId) {
         setActiveMatchId(null);
         latestMatchIdRef.current = null;
         setCommentary([]);
@@ -121,6 +136,10 @@ export const useMatchData = () => {
     loadMatches();
   }, [loadMatches]);
 
+  const dismissNewMatches = useCallback(() => {
+    setNewMatchesCount(0);
+  }, []);
+
   return {
     matches,
     isLoading,
@@ -133,6 +152,9 @@ export const useMatchData = () => {
     status,
 
     activeMatchId,
+
+    newMatchesCount,
+    dismissNewMatches,
 
     watchMatch,
     unwatchMatch,
