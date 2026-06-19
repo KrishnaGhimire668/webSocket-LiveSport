@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import connectDB from "./db/db.js";
 import { matchRouter } from "./routes/matches.js";
 import { attachWebSocketServer } from "./ws/server.js";
+import {commentaryRouter} from "./routes/commentary.js";
 
 dotenv.config();
 
@@ -15,33 +16,23 @@ const PORT = process.env.PORT || 5000;
 
 app.use(express.json());
 
-/*
-|--------------------------------------------------------------------------
-| Routes
-|--------------------------------------------------------------------------
-*/
+//  Routes
+
 app.get("/", (req, res) => {
   res.send("Server is running...");
 });
 
 app.use("/matches", matchRouter);
+app.use('/matches/:id/commentary', commentaryRouter);
 
-/*
-|--------------------------------------------------------------------------
-| WebSocket Setup
-|--------------------------------------------------------------------------
-*/
+// WebSocket Setup
 const { broadcastMatchCreated, broadcastCommentary } =
   attachWebSocketServer(server);
 
 app.locals.broadcastMatchCreated = broadcastMatchCreated;
 app.locals.broadcastCommentary = broadcastCommentary;
 
-/*
-|--------------------------------------------------------------------------
-| Start Server (DB FIRST)
-|--------------------------------------------------------------------------
-*/
+//   Start Server (DB FIRST)
 async function startServer() {
   try {
     console.log("Connecting to MongoDB...");
