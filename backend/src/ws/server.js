@@ -3,11 +3,7 @@ import { wsArcjet } from "../arcjet.js";
 
 const matchSubscribers = new Map();
 
-/*
-|--------------------------------------------------------------------------
-| Subscription Management
-|--------------------------------------------------------------------------
-*/
+// Subscription Management
 
 function subscribe(matchId, socket) {
   if (!matchSubscribers.has(matchId)) {
@@ -36,11 +32,7 @@ function cleanup(socket) {
   }
 }
 
-/*
-|--------------------------------------------------------------------------
-| Helpers
-|--------------------------------------------------------------------------
-*/
+// Helpers
 
 function send(socket, payload) {
   if (socket.readyState !== WebSocket.OPEN) return;
@@ -70,11 +62,7 @@ function broadcastToAll(wss, payload) {
   }
 }
 
-/*
-|--------------------------------------------------------------------------
-| Message Handler
-|--------------------------------------------------------------------------
-*/
+// Message Handler
 
 function handleMessage(socket, data) {
   let message;
@@ -133,11 +121,7 @@ function handleMessage(socket, data) {
   });
 }
 
-/*
-|--------------------------------------------------------------------------
-| WebSocket Server
-|--------------------------------------------------------------------------
-*/
+// WebSocket Server
 
 export function attachWebSocketServer(server, options = {}) {
   const allowedOrigins = options.allowedOrigins || [];
@@ -192,11 +176,7 @@ export function attachWebSocketServer(server, options = {}) {
     });
   });
 
-  /*
-  |--------------------------------------------------------------------------
-  | Connection
-  |--------------------------------------------------------------------------
-  */
+//   Connection
 
   wss.on("connection", (socket) => {
     socket.isAlive = true;
@@ -216,11 +196,7 @@ export function attachWebSocketServer(server, options = {}) {
     });
   });
 
-  /*
-  |--------------------------------------------------------------------------
-  | Heartbeat (keep connection alive)
-  |--------------------------------------------------------------------------
-  */
+//   Heartbeat (keep connection alive)
 
   const interval = setInterval(() => {
     wss.clients.forEach((socket) => {
@@ -233,11 +209,7 @@ export function attachWebSocketServer(server, options = {}) {
 
   wss.on("close", () => clearInterval(interval));
 
-  /*
-  |--------------------------------------------------------------------------
-  | Public API (used in index.js)
-  |--------------------------------------------------------------------------
-  */
+//  Public API (used in index.js)
 
   function broadcastMatchCreated(match) {
     broadcastToAll(wss, {

@@ -1,8 +1,6 @@
 import { MATCH_STATUS } from '../validation/matches.js';
 
-/**
- * Decide match status based on time
- */
+//  Decide match status based on time
 export function getMatchStatus(startTime, endTime, now = new Date()) {
     const start = new Date(startTime);
     const end = new Date(endTime);
@@ -26,9 +24,7 @@ export function getMatchStatus(startTime, endTime, now = new Date()) {
     return MATCH_STATUS.LIVE;
 }
 
-/**
- * Sync match status 
- */
+//  Sync match status 
 export async function syncMatchStatus(match, updateStatus) {
     const nextStatus = getMatchStatus(
         match.startTime,

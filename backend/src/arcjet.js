@@ -1,5 +1,3 @@
-// src/arcjet.js
-
 import arcjet, { detectBot, shield, slidingWindow } from "@arcjet/node";
 
 const arcjetKey = process.env.ARCJET_KEY;
@@ -9,11 +7,7 @@ const arcjetMode =
     ? "DRY_RUN"
     : "LIVE";
 
-/*
-|--------------------------------------------------------------------------
-| HTTP Protection
-|--------------------------------------------------------------------------
-*/
+// HTTP Protection
 export const httpArcjet = arcjetKey
   ? arcjet({
       key: arcjetKey,
@@ -34,11 +28,7 @@ export const httpArcjet = arcjetKey
     })
   : null;
 
-/*
-|--------------------------------------------------------------------------
-| WebSocket Protection
-|--------------------------------------------------------------------------
-*/
+// WebSocket Protection
 export const wsArcjet = arcjetKey
   ? arcjet({
       key: arcjetKey,
@@ -59,11 +49,7 @@ export const wsArcjet = arcjetKey
     })
   : null;
 
-/*
-|--------------------------------------------------------------------------
-| Express Middleware
-|--------------------------------------------------------------------------
-*/
+// Express Middleware
 export function securityMiddleware() {
   return async (req, res, next) => {
     if (!httpArcjet) {

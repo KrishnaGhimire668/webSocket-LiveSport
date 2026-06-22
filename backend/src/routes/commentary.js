@@ -12,11 +12,7 @@ const MAX_LIMIT = 100;
 
 export const commentaryRouter = Router({ mergeParams: true });
 
-/*
-|--------------------------------------------------------------------------
-| GET COMMENTARY
-|--------------------------------------------------------------------------
-*/
+// GET COMMENTARY
 commentaryRouter.get("/", async (req, res) => {
   const paramsResult = matchIdParamSchema.safeParse(req.params);
 
@@ -56,11 +52,8 @@ commentaryRouter.get("/", async (req, res) => {
   }
 });
 
-/*
-|--------------------------------------------------------------------------
-| CREATE COMMENTARY
-|--------------------------------------------------------------------------
-*/
+// CREATE COMMENTARY
+
 commentaryRouter.post("/", async (req, res) => {
   const paramsResult = matchIdParamSchema.safeParse(req.params);
 
