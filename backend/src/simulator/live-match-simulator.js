@@ -36,6 +36,8 @@ const GENERAL_EVENTS = [
 
 let simulatorState = null;
 
+// ---------------- HELPERS ----------------
+
 function randomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
@@ -50,11 +52,14 @@ function shuffle(items) {
 
 function liveMatchWindow() {
   const now = new Date();
-  const startTime = new Date(now.getTime() - 15 * 60 * 1000);
-  const endTime = new Date(now.getTime() + 90 * 60 * 1000);
 
-  return { startTime, endTime };
+  return {
+    startTime: new Date(now.getTime() - 15 * 60 * 1000),
+    endTime: new Date(now.getTime() + 90 * 60 * 1000),
+  };
 }
+
+// ---------------- SEED MATCHES ----------------
 
 async function seedLiveMatches({ broadcastMatchCreated }) {
   const existingLiveCount = await Match.countDocuments({ status: "live" });
@@ -76,11 +81,16 @@ async function seedLiveMatches({ broadcastMatchCreated }) {
     broadcastMatchCreated?.(match);
   }
 
-  console.log(`Live simulator seeded ${seededMatches.length} live matches`);
+  console.log(`Live simulator seeded ${seededMatches.length} matches`);
 }
 
+// ---------------- PICK MATCHES ----------------
+
 async function pickLiveMatches() {
-  const liveMatches = await Match.find({ status: "live" }).sort({ updatedAt: -1 });
+  const liveMatches = await Match.find({ status: "live" }).sort({
+    updatedAt: -1,
+  });
+
   const count = randomInt(
     Math.min(MIN_ACTIVE_MATCHES, liveMatches.length),
     Math.min(MAX_ACTIVE_MATCHES, liveMatches.length)
@@ -88,6 +98,8 @@ async function pickLiveMatches() {
 
   return shuffle(liveMatches).slice(0, count);
 }
+
+// ---------------- COMMENTARY ----------------
 
 async function createCommentary(match, scoringTeam, didScore) {
   const minute = randomInt(1, 90);
@@ -117,20 +129,26 @@ async function createCommentary(match, scoringTeam, didScore) {
   });
 }
 
+// ---------------- UPDATE MATCH ----------------
+
 async function updateOneMatch(match, broadcasters) {
-  const currentMatch = await Match.findOne({ _id: match._id, status: "live" });
+  const currentMatch = await Match.findOne({
+    _id: match._id,
+    status: "live",
+  });
+
   if (!currentMatch) return;
 
   const homeScores = Math.random() >= 0.5;
-  const scoringTeam = homeScores ? currentMatch.homeTeam : currentMatch.awayTeam;
+  const scoringTeam = homeScores
+    ? currentMatch.homeTeam
+    : currentMatch.awayTeam;
+
   const shouldScore = Math.random() < SCORE_CHANCE;
 
   if (shouldScore) {
-    if (homeScores) {
-      currentMatch.homeScore += 1;
-    } else {
-      currentMatch.awayScore += 1;
-    }
+    if (homeScores) currentMatch.homeScore += 1;
+    else currentMatch.awayScore += 1;
 
     await currentMatch.save();
 
@@ -140,9 +158,16 @@ async function updateOneMatch(match, broadcasters) {
     });
   }
 
-  const commentary = await createCommentary(currentMatch, scoringTeam, shouldScore);
+  const commentary = await createCommentary(
+    currentMatch,
+    scoringTeam,
+    shouldScore
+  );
+
   broadcasters.broadcastCommentary?.(currentMatch._id, commentary);
 }
+
+// ---------------- SIMULATION LOOP ----------------
 
 async function runTick(state) {
   if (state.isRunning || state.isStopped) return;
@@ -151,6 +176,7 @@ async function runTick(state) {
 
   try {
     let liveMatches = await pickLiveMatches();
+
     if (liveMatches.length === 0) {
       await seedLiveMatches(state.broadcasters);
       liveMatches = await pickLiveMatches();
@@ -162,7 +188,11 @@ async function runTick(state) {
       Math.min(MIN_ACTIVE_MATCHES, liveMatches.length),
       Math.min(MAX_ACTIVE_MATCHES, liveMatches.length)
     );
-    const selectedMatches = shuffle(liveMatches).slice(0, updatesThisTick);
+
+    const selectedMatches = shuffle(liveMatches).slice(
+      0,
+      updatesThisTick
+    );
 
     for (const match of selectedMatches) {
       await updateOneMatch(match, state.broadcasters);
@@ -174,6 +204,8 @@ async function runTick(state) {
   }
 }
 
+// ---------------- SCHEDULER ----------------
+
 function scheduleNextTick(state) {
   if (state.isStopped) return;
 
@@ -182,6 +214,8 @@ function scheduleNextTick(state) {
     scheduleNextTick(state);
   }, COMMENTARY_INTERVAL_MS);
 }
+
+// ---------------- START SIMULATOR ----------------
 
 export async function startLiveMatchSimulator(broadcasters = {}) {
   if (simulatorState && !simulatorState.isStopped) {
@@ -195,6 +229,7 @@ export async function startLiveMatchSimulator(broadcasters = {}) {
     isRunning: false,
     isStopped: false,
     timeoutId: null,
+
     stop() {
       simulatorState.isStopped = true;
 

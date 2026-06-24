@@ -3,7 +3,7 @@ import { wsArcjet } from "../arcjet.js";
 
 const matchSubscribers = new Map();
 
-// Subscription Management
+// ---------------- SUBSCRIPTION ----------------
 
 function subscribe(matchId, socket) {
   if (!matchSubscribers.has(matchId)) {
@@ -32,7 +32,7 @@ function cleanup(socket) {
   }
 }
 
-// Helpers
+// ---------------- HELPERS ----------------
 
 function send(socket, payload) {
   if (socket.readyState !== WebSocket.OPEN) return;
@@ -62,7 +62,7 @@ function broadcastToAll(wss, payload) {
   }
 }
 
-// Message Handler
+// ---------------- MESSAGE HANDLER ----------------
 
 function handleMessage(socket, data) {
   let message;
@@ -94,7 +94,6 @@ function handleMessage(socket, data) {
   if (type === "subscribe" && matchId) {
     const subscriptionId = String(matchId);
     subscribe(subscriptionId, socket);
-
     socket.subscriptions.add(subscriptionId);
 
     return send(socket, {
@@ -106,7 +105,6 @@ function handleMessage(socket, data) {
   if (type === "unsubscribe" && matchId) {
     const subscriptionId = String(matchId);
     unsubscribe(subscriptionId, socket);
-
     socket.subscriptions.delete(subscriptionId);
 
     return send(socket, {
@@ -117,11 +115,11 @@ function handleMessage(socket, data) {
 
   return send(socket, {
     type: "error",
-    message: `Unknown WebSocket message type: ${type || "missing"}`,
+    message: `Unknown message type: ${type || "missing"}`,
   });
 }
 
-// WebSocket Server
+// ---------------- MAIN WS SERVER ----------------
 
 export function attachWebSocketServer(server, options = {}) {
   const allowedOrigins = options.allowedOrigins || [];
@@ -143,28 +141,30 @@ export function attachWebSocketServer(server, options = {}) {
     }
 
     const origin = req.headers.origin;
-    if (origin && allowedOrigins.length > 0 && !allowedOrigins.includes(origin)) {
+
+    if (
+      origin &&
+      allowedOrigins.length > 0 &&
+      !allowedOrigins.includes(origin)
+    ) {
+      console.log("Blocked WS origin:", origin);
       socket.write("HTTP/1.1 403 Forbidden\r\n\r\n");
       socket.destroy();
       return;
     }
 
-    // Arcjet protection (optional)
+    // Arcjet (optional)
     if (wsArcjet) {
       try {
         const decision = await wsArcjet.protect(req);
 
         if (decision.isDenied()) {
-          socket.write(
-            decision.reason?.isRateLimit()
-              ? "HTTP/1.1 429 Too Many Requests\r\n\r\n"
-              : "HTTP/1.1 403 Forbidden\r\n\r\n"
-          );
+          socket.write("HTTP/1.1 403 Forbidden\r\n\r\n");
           socket.destroy();
           return;
         }
       } catch (err) {
-        console.error("WS protection error:", err);
+        console.error("WS Arcjet error:", err);
         socket.write("HTTP/1.1 500 Internal Server Error\r\n\r\n");
         socket.destroy();
         return;
@@ -176,7 +176,7 @@ export function attachWebSocketServer(server, options = {}) {
     });
   });
 
-//   Connection
+  // ---------------- CONNECTION ----------------
 
   wss.on("connection", (socket) => {
     socket.isAlive = true;
@@ -187,7 +187,6 @@ export function attachWebSocketServer(server, options = {}) {
     send(socket, { type: "welcome" });
 
     socket.on("message", (data) => handleMessage(socket, data));
-
     socket.on("close", () => cleanup(socket));
 
     socket.on("error", (err) => {
@@ -196,7 +195,7 @@ export function attachWebSocketServer(server, options = {}) {
     });
   });
 
-//   Heartbeat (keep connection alive)
+  // ---------------- HEARTBEAT ----------------
 
   const interval = setInterval(() => {
     wss.clients.forEach((socket) => {
@@ -209,7 +208,7 @@ export function attachWebSocketServer(server, options = {}) {
 
   wss.on("close", () => clearInterval(interval));
 
-//  Public API (used in index.js)
+  // ---------------- BROADCAST API ----------------
 
   function broadcastMatchCreated(match) {
     broadcastToAll(wss, {
