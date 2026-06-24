@@ -18,15 +18,10 @@ async function apiRequest(url, options = {}) {
 }
 
 export async function fetchMatches(limit = 100) {
-  return apiRequest(
-    `${API_BASE_URL}/matches?limit=${limit}`
-  );
+  return apiRequest(`${API_BASE_URL}/matches?limit=${limit}`);
 }
 
-export async function fetchMatchCommentary(
-  matchId,
-  limit = 50
-) {
+export async function fetchMatchCommentary(matchId, limit = 50) {
   return apiRequest(
     `${API_BASE_URL}/matches/${matchId}/commentary?limit=${limit}`
   );

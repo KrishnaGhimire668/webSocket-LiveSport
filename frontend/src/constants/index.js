@@ -1,7 +1,8 @@
-const DEFAULT_API_BASE_URL = "http://localhost:5000";
+const DEFAULT_API_BASE_URL =
+  "https://websocket-livesport.onrender.com";
 
 const DEFAULT_WS_BASE_URL =
-  "ws://localhost:5000/ws";
+  "wss://websocket-livesport.onrender.com/ws";
 
 export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
