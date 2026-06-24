@@ -78,6 +78,8 @@ function handleMessage(socket, data) {
   const { type, matchId } = message;
 
   if (type === "setSubscriptions" && Array.isArray(message.matchIds)) {
+    if (!socket.subscriptions) socket.subscriptions = new Set();
+
     for (const id of message.matchIds) {
       const subscriptionId = String(id);
       subscribe(subscriptionId, socket);
@@ -91,6 +93,8 @@ function handleMessage(socket, data) {
   }
 
   if (type === "subscribe" && matchId) {
+    if (!socket.subscriptions) socket.subscriptions = new Set();
+
     const subscriptionId = String(matchId);
     subscribe(subscriptionId, socket);
     socket.subscriptions.add(subscriptionId);
@@ -102,6 +106,8 @@ function handleMessage(socket, data) {
   }
 
   if (type === "unsubscribe" && matchId) {
+    if (!socket.subscriptions) socket.subscriptions = new Set();
+
     const subscriptionId = String(matchId);
     unsubscribe(subscriptionId, socket);
     socket.subscriptions.delete(subscriptionId);
@@ -121,7 +127,9 @@ function handleMessage(socket, data) {
 // ---------------- MAIN WS SERVER ----------------
 
 export function attachWebSocketServer(server, options = {}) {
-  const allowedOrigins = options.allowedOrigins || [];
+  const allowedOrigins = (options.allowedOrigins || []).map(o =>
+    o?.replace(/\/$/, "")
+  );
 
   const wss = new WebSocketServer({
     noServer: true,
@@ -142,7 +150,7 @@ export function attachWebSocketServer(server, options = {}) {
         return;
       }
 
-      const origin = req.headers.origin;
+      const origin = req.headers.origin?.replace(/\/$/, "");
 
       if (
         origin &&
@@ -155,7 +163,7 @@ export function attachWebSocketServer(server, options = {}) {
         return;
       }
 
-      // Arcjet protection (optional)
+      // Arcjet protection
       if (wsArcjet) {
         try {
           const decision = await wsArcjet.protect(req);

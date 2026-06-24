@@ -49,7 +49,7 @@ const corsOptions = {
 
 // IMPORTANT: apply CORS BEFORE routes
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
+app.options(/.*/, cors(corsOptions));
 
 app.use(express.json());
 
